@@ -44,8 +44,9 @@ RUN pip install --no-cache-dir -r requirements.txt
 ENV PYTHONUNBUFFERED=1 \
     SYSDX_DATA_ROOT=/data
 
-# /data is where the Railway volume should be mounted (uploads-in-progress + case data)
-VOLUME ["/data"]
+# /data is where the persistent volume should be mounted (uploads-in-progress + case
+# data) — deliberately no `VOLUME` instruction here: Railway's build system rejects it
+# ("use Railway Volumes" instead), so the mount is configured on the service, not the image.
 
 EXPOSE 8000
 
