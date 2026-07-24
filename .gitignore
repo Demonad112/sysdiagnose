@@ -3,6 +3,12 @@ cases/*
 yara/*
 not_yet_parsed.txt
 
+# webapp
+webapp/frontend/node_modules/
+webapp/backend/data/
+webapp/**/.env
+*.db
+
 # private test data
 /tests/testdata-*
 /tests/tmp
