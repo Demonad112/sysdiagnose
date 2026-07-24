@@ -50,6 +50,10 @@ ENV PYTHONUNBUFFERED=1 \
 
 EXPOSE 8000
 
-# Railway overrides this per-service: the web service uses this default, the worker
-# service sets its start command to `python -m app.worker` (see railway.json).
-CMD ["python", "-m", "uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]
+# Default: run API + worker in one process/container (app/combined.py) — the deploy
+# topology this image is built for on platforms (Railway included) where a volume can
+# only attach to a single service. If your platform lets two services share one volume,
+# you can instead run this image as two services and override the start command to
+# `python -m uvicorn app.main:app --host 0.0.0.0 --port $PORT` (web) and
+# `python -m app.worker` (worker) — see webapp/README.md.
+CMD ["python", "-m", "app.combined"]

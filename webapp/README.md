@@ -60,24 +60,24 @@ Dockerfile builds this automatically for deploy).
 
 ## Deploying to Railway
 
-The root `railway.json` only sets the build config (build from `webapp/Dockerfile`) —
-deliberately nothing under `deploy`, because Railway applies a repo's `railway.json` to
-*every* service built from that repo, and `web` and `worker` need different start
-commands (and only `web` should have an HTTP healthcheck; `worker` never listens on a
-port, so a healthcheck path there just fails forever). Set up **two services** from that
-same repo in one Railway project, and configure `deploy.startCommand` per service
-(dashboard → service → Settings, or via the Railway MCP/CLI) rather than in the file:
+Railway volumes attach to exactly one service — there's no way to share one volume
+between two services the way `web` + `worker` need to share on-disk case data. So on
+Railway this deploys as **one service** running `app/combined.py` (the Dockerfile's
+default `CMD`): the worker loop runs in a background thread, uvicorn runs in the main
+thread, both against the same local disk. Steps:
 
-1. **`web`** — start command `python -m uvicorn app.main:app --host 0.0.0.0 --port $PORT`,
-   healthcheck path `/api/health`, attach the shared volume at `/data`, expose it
-   publicly.
-2. **`worker`** — start command `python -m app.worker`, no healthcheck path. Attach the
-   *same* volume at `/data`, no public networking needed.
+1. Create one service from this repo/branch (root `railway.json` points it at
+   `webapp/Dockerfile`; no start command override needed, the image's default `CMD`
+   already runs the combined entrypoint).
+2. Attach a volume at `/data`.
+3. Add a Postgres plugin to the project and set `SYSDX_DATABASE_URL` to its connection
+   string.
+4. Set `SYSDX_DATA_ROOT=/data` (see `webapp/.env.example` for the rest).
+5. Enable a public domain on the service.
 
-Both services need the same environment variables (see `webapp/.env.example`):
-`SYSDX_DATA_ROOT=/data`, `SYSDX_DATABASE_URL` pointed at a Railway Postgres plugin
-attached to the project, and `SYSDX_CORS_ORIGINS` (only relevant if you ever split the
-frontend into its own service — by default `web` serves the built frontend itself).
-
-Add a Postgres plugin to the project and set `SYSDX_DATABASE_URL` on both services to its
-connection string (SQLite is only used as the zero-config local-dev fallback).
+If you deploy somewhere that *does* give you a way to share a filesystem across two
+services (a platform with shared/NFS-style volumes, or by running both against S3/object
+storage instead of local disk), you can split back into two services and override each
+one's start command instead: `python -m uvicorn app.main:app --host 0.0.0.0 --port $PORT`
+for the API, `python -m app.worker` for the worker — both still need the same
+`SYSDX_DATA_ROOT` and `SYSDX_DATABASE_URL`.
