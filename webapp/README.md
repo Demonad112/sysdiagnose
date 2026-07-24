@@ -60,15 +60,19 @@ Dockerfile builds this automatically for deploy).
 
 ## Deploying to Railway
 
-The root `railway.json` builds `webapp/Dockerfile`, which produces one image containing
-both the API and the worker entrypoint. Set up **two services** from that same image in
-one Railway project:
+The root `railway.json` only sets the build config (build from `webapp/Dockerfile`) —
+deliberately nothing under `deploy`, because Railway applies a repo's `railway.json` to
+*every* service built from that repo, and `web` and `worker` need different start
+commands (and only `web` should have an HTTP healthcheck; `worker` never listens on a
+port, so a healthcheck path there just fails forever). Set up **two services** from that
+same repo in one Railway project, and configure `deploy.startCommand` per service
+(dashboard → service → Settings, or via the Railway MCP/CLI) rather than in the file:
 
-1. **`web`** — uses `railway.json` as-is (`uvicorn app.main:app`), attach the shared
-   volume at `/data`, expose it publicly.
-2. **`worker`** — same repo/Dockerfile, but override the start command to
-   `python -m app.worker`. Attach the *same* volume at `/data`, no public networking
-   needed.
+1. **`web`** — start command `python -m uvicorn app.main:app --host 0.0.0.0 --port $PORT`,
+   healthcheck path `/api/health`, attach the shared volume at `/data`, expose it
+   publicly.
+2. **`worker`** — start command `python -m app.worker`, no healthcheck path. Attach the
+   *same* volume at `/data`, no public networking needed.
 
 Both services need the same environment variables (see `webapp/.env.example`):
 `SYSDX_DATA_ROOT=/data`, `SYSDX_DATABASE_URL` pointed at a Railway Postgres plugin
