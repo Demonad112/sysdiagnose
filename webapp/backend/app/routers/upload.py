@@ -120,7 +120,7 @@ def complete_batch(batch_id: str, db: Session = Depends(get_db)):
             raise HTTPException(400, "archive mode expects exactly one file")
         source_path = str(upload_service.assembled_item_path(batch_id, items[0].relative_path))
     else:
-        source_path = str(upload_service.assembled_root(batch_id))
+        source_path = upload_service.resolve_folder_source(batch_id)
 
     case_id = f"sysdx_{uuid.uuid4().hex[:12]}"
     display_name = items[0].relative_path.split("/")[0] if batch.mode == "folder" else items[0].relative_path

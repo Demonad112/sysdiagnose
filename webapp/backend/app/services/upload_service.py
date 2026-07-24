@@ -71,5 +71,22 @@ def assemble_item(batch_id: str, item_id: str, relative_path: str, total_chunks:
     return dest
 
 
+def resolve_folder_source(batch_id: str) -> str:
+    """A folder pick's items carry the picked folder's own name as the first path
+    segment (browser-supplied webkitRelativePath), so after assembly the actual
+    sysdiagnose files (sysdiagnose.log etc.) sit one level below `assembled_root` — inside
+    that single wrapped directory, not at the root itself. The framework expects those
+    files at the root of whatever path it's given, so descend into the wrapped folder
+    when that's unambiguous. Falls back to the raw root for drag-dropped loose files
+    (no wrapping folder) or a folder mixed with extra top-level files."""
+    root = assembled_root(batch_id)
+    entries = list(root.iterdir())
+    dirs = [e for e in entries if e.is_dir()]
+    files = [e for e in entries if e.is_file()]
+    if len(dirs) == 1 and not files:
+        return str(dirs[0])
+    return str(root)
+
+
 def cleanup_batch(batch_id: str) -> None:
     shutil.rmtree(batch_dir(batch_id), ignore_errors=True)

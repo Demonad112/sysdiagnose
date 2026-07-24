@@ -22,6 +22,7 @@ from pathlib import Path
 from app import config  # noqa: F401
 from app.db import SessionLocal
 from app.models import Case, Job, ParserProgress
+from app.services import upload_service
 
 
 def _import_instance(kind: str, name: str, sd_config, case: dict):
@@ -63,6 +64,7 @@ def run_job(job_id: str) -> None:
         db.add(step)
         db.commit()
         t0 = time.time()
+        upload_batch_id = job.case.source_upload_batch_id
         try:
             case_meta = sd.create_case(job.case.source_path, force=True, case_id=job.case_id)
             step.status, step.duration = "success", time.time() - t0
@@ -74,6 +76,12 @@ def run_job(job_id: str) -> None:
             job.status, job.error_message, case_row.status = "failed", str(e), "error"
             db.commit()
             return
+        finally:
+            # the uploaded chunks/assembled copy are no longer needed once extraction has
+            # been attempted (the framework has its own copy under cases/<id>/data/ on
+            # success) — leaving them around was silently filling the volume on every upload
+            if upload_batch_id:
+                upload_service.cleanup_batch(upload_batch_id)
         job.completed_steps += 1
         db.commit()
 
