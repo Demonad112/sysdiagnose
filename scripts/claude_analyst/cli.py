@@ -22,12 +22,13 @@ ingest
                                    resumable HTTPS download of an archive
   sdq ingest <archive.tar.gz> [--case-id ID] [--force]
                                    create the case, extract, survey contents
+  sdq status [case_id]             readiness report from what's on disk
 
 not yet implemented
   sdq parse | map | search | sql | timeline | artifact | gaps
 """
 
-PLANNED = {"parse", "map", "search", "sql", "timeline", "artifact", "gaps", "around", "agg", "report", "status"}
+PLANNED = {"parse", "map", "search", "sql", "timeline", "artifact", "gaps", "around", "agg", "report"}
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -54,10 +55,14 @@ def main(argv: list[str] | None = None) -> int:
         from .ingest import main as run
 
         return run(rest)
+    if cmd == "status":
+        from .status import main as run
+
+        return run(rest)
 
     if cmd in PLANNED:
         print(f"'{cmd}' is planned but not implemented yet.", file=sys.stderr)
-        print("Built so far: doctor, bootstrap, fetch, ingest.", file=sys.stderr)
+        print("Built so far: doctor, bootstrap, fetch, ingest, status.", file=sys.stderr)
         return 2
 
     print(f"unknown command: {cmd}\n", file=sys.stderr)
