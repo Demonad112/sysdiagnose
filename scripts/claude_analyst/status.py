@@ -100,6 +100,20 @@ def render(case_id: str, cases_path: Path) -> str:
         lines.append("")
         lines.append("logarchive index   not built — run: python -m scripts.claude_analyst.logarchive_index <data_dir>")
 
+    # The one failure mode worth a loud warning: any analyser that still calls
+    # LogarchiveParser.get_result() materialises the full uncompressed log
+    # (~1.2 KB/event, multiple GB) as a side effect. Caught this exact thing
+    # happening from ps_everywhere on a real run — apps.py isn't the only one.
+    stray = case_dir / "parsed_data" / "logarchive.jsonl"
+    if stray.is_file():
+        size = stray.stat().st_size
+        lines.append("")
+        lines.append(
+            f"!!  parsed_data/logarchive.jsonl exists ({size / 1e9:.2f} GB) — an analyser materialised "
+            "the full log. Re-check your -x exclusion list: `grep -l LogarchiveParser "
+            "src/sysdiagnose/analysers/*.py` is the ground truth, not a fixed list."
+        )
+
     return "\n".join(lines)
 
 

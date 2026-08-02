@@ -137,9 +137,19 @@ Exclude those two deliberately:
   - apps: it calls LogarchiveParser.get_result(), which triggers exactly that
     write.
 
-Then run the analysers, excluding the ones that will fail or are redundant:
+Then run the analysers, excluding the ones that will fail, are redundant, or
+ALSO call LogarchiveParser under the hood:
 
-  .venv/bin/python -m sysdiagnose -c local1 analyse all -x apps,coverage,yarascan
+  .venv/bin/python -m sysdiagnose -c local1 analyse all -x apps,ps_everywhere,coverage,yarascan
+
+grep the analysers directory yourself before trusting this list — `grep -l
+LogarchiveParser src/sysdiagnose/analysers/*.py` is the ground truth, and it
+currently returns exactly `apps.py` and `ps_everywhere.py`. Missing either one
+is not cosmetic: it materialises the full uncompressed logarchive.jsonl (~1.2
+KB/event) as a side effect, which is multiple GB even on a modest capture.
+Verified the hard way — running only `-x apps,coverage,yarascan` (no
+ps_everywhere) let a background run write 3.9 GB / 2.4M lines of
+logarchive.jsonl before it was caught and killed partway through.
 
 Read per-module results from cases/local1/logs/summary-<module>.json — note that
 path. It is NOT parsed_data/<module>.summary.json.
