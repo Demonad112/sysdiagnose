@@ -1,0 +1,22 @@
+#!/usr/bin/env bash
+# sdq — entry point for the Claude-facing sysdiagnose analysis layer.
+#
+# Re-execs under the project virtualenv when one exists, so it works whether or
+# not the caller has activated it. Before bootstrap has run there is no venv, so
+# it falls back to the system interpreter — enough for `sdq doctor` and
+# `sdq bootstrap`, which are stdlib-only by design.
+set -euo pipefail
+
+HERE="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
+ROOT="$(dirname -- "$HERE")"
+
+VENV_PY="$ROOT/.venv/bin/python"
+if [ -x "$VENV_PY" ]; then
+  PY="$VENV_PY"
+else
+  PY="$(command -v python3 || command -v python)"
+fi
+
+export PYTHONPATH="$ROOT/src${PYTHONPATH:+:$PYTHONPATH}"
+cd "$ROOT"
+exec "$PY" -m scripts.claude_analyst.cli "$@"

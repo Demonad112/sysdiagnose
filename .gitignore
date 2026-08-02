@@ -73,3 +73,9 @@ venv/
 .Trashes
 ehthumbs.db
 Thumbs.db
+
+# Claude analysis layer — all local, all regenerable, none of it belongs in git.
+# archives/ and .sdq/ in particular can carry device-identifying forensic data.
+archives/
+tools/
+.sdq/
