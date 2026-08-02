@@ -110,13 +110,18 @@ def fetch(ref: str, dest: Path, *, expected_size: int | None = None, quiet: bool
     preflight(dest.parent, expected_size)
 
     cmd = [
-        "curl", "-L",
-        "-C", "-",            # resume a partial file rather than restarting
-        "--retry", "5",
-        "--retry-delay", "2",
+        "curl",
+        "-L",
+        "-C",
+        "-",  # resume a partial file rather than restarting
+        "--retry",
+        "5",
+        "--retry-delay",
+        "2",
         "--retry-connrefused",
         "--fail",
-        "-o", str(dest),
+        "-o",
+        str(dest),
         url,
     ]
     if quiet:

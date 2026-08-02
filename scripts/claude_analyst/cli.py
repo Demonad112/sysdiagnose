@@ -40,15 +40,19 @@ def main(argv: list[str] | None = None) -> int:
 
     if cmd == "doctor":
         from .env import main as run
+
         return run(rest)
     if cmd == "bootstrap":
         from .bootstrap import main as run
+
         return run(rest)
     if cmd == "fetch":
         from .fetch_drive import main as run
+
         return run(rest)
     if cmd == "ingest":
         from .ingest import main as run
+
         return run(rest)
 
     if cmd in PLANNED:

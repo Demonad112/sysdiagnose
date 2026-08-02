@@ -106,7 +106,10 @@ def step_pip_saf() -> StepResult:
     if _pip_has("sysdiagnose"):
         return StepResult("install SAF", True, "already importable", 0.0, skipped=True)
     _run([str(py), "-m", "pip", "install", "-q", "--upgrade", "pip"], timeout=600)
-    res = _run([str(py), "-m", "pip", "install", "-q", "-e", "."], timeout=2400)
+    # Install the dev extra too: it pins ruff to the same range CI uses. An
+    # unpinned `pip install ruff` picks up a newer minor whose formatter
+    # disagrees with CI's, so `ruff format` locally then fails `--check` there.
+    res = _run([str(py), "-m", "pip", "install", "-q", "-e", ".[dev]"], timeout=2400)
     if res.returncode != 0:
         return StepResult("install SAF", False, _tail(res.stderr or res.stdout), time.time() - t0)
     ok = _pip_has("sysdiagnose")
