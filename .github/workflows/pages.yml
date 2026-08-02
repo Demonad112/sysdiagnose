@@ -1,0 +1,53 @@
+# Publishes docs/ to GitHub Pages.
+#
+# DELIBERATELY MANUAL. There is no `on: push` trigger, so this never runs by
+# itself — merging or pushing will not publish anything. To go live you have to
+# do both of these on purpose:
+#
+#   1. Settings > Pages > Source = "GitHub Actions"
+#   2. Actions > "Publish docs to GitHub Pages" > Run workflow
+#
+# docs/index.html contains no data from any sysdiagnose case — it describes the
+# structure of a sysdiagnose and nothing else. Keep it that way. Case output is
+# device-identifying (serial, installed apps, Wi-Fi networks) and must never be
+# committed into docs/ or published here.
+
+name: Publish docs to GitHub Pages
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Guard against publishing case data
+        run: |
+          if ls docs/*.parquet docs/*.duckdb docs/case*.json docs/catalog*.json 2>/dev/null | grep -q .; then
+            echo "::error::Case-derived artifacts found in docs/. Refusing to publish."
+            exit 1
+          fi
+          echo "docs/ contains no case artifacts."
+
+      - uses: actions/configure-pages@v5
+
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: docs
+
+      - id: deployment
+        uses: actions/deploy-pages@v4
