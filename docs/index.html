@@ -1,0 +1,628 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Sysdiagnose Analyst — what's in there, and what to ask</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="description" content="A map of what an Apple sysdiagnose contains, by category, with ready-made prompts for interrogating it with Claude Code.">
+
+<style>
+  :root {
+    color-scheme: light dark;
+    --bg: #fbfaf9;
+    --panel: #ffffff;
+    --panel-2: #f5f3f0;
+    --ink: #1a1917;
+    --ink-2: #55514b;
+    --ink-3: #85807a;
+    --line: #e3dfd9;
+    --accent: #b4552d;
+    --accent-soft: #f6ece6;
+    --code-bg: #f3f0ec;
+    --mac: #2f6f4f;
+    --ios: #3f5f9e;
+    --radius: 10px;
+    --mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #16151a;
+      --panel: #1e1d23;
+      --panel-2: #26252c;
+      --ink: #ece9e4;
+      --ink-2: #b0aba4;
+      --ink-3: #837e78;
+      --line: #33313a;
+      --accent: #e0855c;
+      --accent-soft: #2e2019;
+      --code-bg: #26252c;
+      --mac: #6dbf94;
+      --ios: #8fb0e8;
+    }
+  }
+  :root[data-theme="light"] {
+    --bg: #fbfaf9; --panel: #ffffff; --panel-2: #f5f3f0; --ink: #1a1917;
+    --ink-2: #55514b; --ink-3: #85807a; --line: #e3dfd9; --accent: #b4552d;
+    --accent-soft: #f6ece6; --code-bg: #f3f0ec; --mac: #2f6f4f; --ios: #3f5f9e;
+  }
+  :root[data-theme="dark"] {
+    --bg: #16151a; --panel: #1e1d23; --panel-2: #26252c; --ink: #ece9e4;
+    --ink-2: #b0aba4; --ink-3: #837e78; --line: #33313a; --accent: #e0855c;
+    --accent-soft: #2e2019; --code-bg: #26252c; --mac: #6dbf94; --ios: #8fb0e8;
+  }
+
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; background: var(--bg); color: var(--ink);
+    font: 16px/1.6 ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    -webkit-font-smoothing: antialiased;
+  }
+  .wrap { max-width: 1140px; margin: 0 auto; padding: 0 20px 80px; }
+
+  header { padding: 56px 0 28px; border-bottom: 1px solid var(--line); }
+  h1 { margin: 0 0 10px; font-size: clamp(1.7rem, 4vw, 2.5rem); line-height: 1.15; letter-spacing: -0.02em; }
+  .tagline { margin: 0; color: var(--ink-2); font-size: 1.05rem; max-width: 68ch; }
+
+  .privacy {
+    margin: 22px 0 0; padding: 12px 16px; border-radius: var(--radius);
+    background: var(--accent-soft); border: 1px solid var(--line);
+    color: var(--ink-2); font-size: 0.9rem; max-width: 78ch;
+  }
+  .privacy strong { color: var(--ink); }
+
+  .controls {
+    display: flex; flex-wrap: wrap; gap: 12px; align-items: center;
+    padding: 22px 0; position: sticky; top: 0; background: var(--bg);
+    border-bottom: 1px solid var(--line); z-index: 10;
+  }
+  input[type="text"], input[type="search"] {
+    font: inherit; color: var(--ink); background: var(--panel);
+    border: 1px solid var(--line); border-radius: var(--radius);
+    padding: 9px 13px;
+  }
+  input:focus-visible, button:focus-visible, summary:focus-visible {
+    outline: 2px solid var(--accent); outline-offset: 2px;
+  }
+  #q { flex: 1 1 260px; min-width: 0; }
+  .casebox { display: flex; align-items: center; gap: 8px; flex: 0 1 auto; }
+  .casebox label { color: var(--ink-3); font-size: 0.85rem; white-space: nowrap; }
+  #casepath { width: 200px; font-family: var(--mono); font-size: 0.85rem; }
+
+  .seg { display: inline-flex; border: 1px solid var(--line); border-radius: var(--radius); overflow: hidden; }
+  .seg button {
+    font: inherit; font-size: 0.88rem; padding: 8px 14px; border: 0; cursor: pointer;
+    background: var(--panel); color: var(--ink-2);
+  }
+  .seg button + button { border-left: 1px solid var(--line); }
+  .seg button[aria-pressed="true"] { background: var(--accent); color: #fff; }
+
+  .themebtn {
+    font: inherit; font-size: 0.88rem; padding: 8px 14px; cursor: pointer;
+    background: var(--panel); color: var(--ink-2);
+    border: 1px solid var(--line); border-radius: var(--radius);
+  }
+
+  .count { color: var(--ink-3); font-size: 0.85rem; padding: 14px 0 4px; }
+
+  .grid { display: grid; gap: 14px; grid-template-columns: 1fr; }
+  @media (min-width: 800px) { .grid { grid-template-columns: 1fr 1fr; } }
+
+  details.cat {
+    background: var(--panel); border: 1px solid var(--line);
+    border-radius: var(--radius); overflow: hidden;
+  }
+  details.cat[open] { grid-column: 1 / -1; }
+  summary {
+    cursor: pointer; padding: 16px 18px; display: flex; gap: 12px;
+    align-items: baseline; list-style: none;
+  }
+  summary::-webkit-details-marker { display: none; }
+  summary::after {
+    content: "+"; margin-left: auto; color: var(--ink-3);
+    font-family: var(--mono); font-size: 1.1rem; line-height: 1;
+  }
+  details[open] summary::after { content: "\2212"; }
+  summary:hover { background: var(--panel-2); }
+  .cat-name { font-weight: 650; font-size: 1.02rem; letter-spacing: -0.01em; }
+  .cat-blurb { color: var(--ink-3); font-size: 0.86rem; flex: 1 1 100%; margin-top: 2px; }
+
+  .tag {
+    font-size: 0.68rem; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase;
+    padding: 2px 7px; border-radius: 5px; border: 1px solid currentColor; white-space: nowrap;
+  }
+  .tag.macos { color: var(--mac); }
+  .tag.ios { color: var(--ios); }
+
+  .body { padding: 0 18px 20px; border-top: 1px solid var(--line); }
+  h3 {
+    font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.08em;
+    color: var(--ink-3); margin: 20px 0 9px; font-weight: 700;
+  }
+  ul.sources { margin: 0; padding: 0; list-style: none; }
+  ul.sources li { padding: 5px 0; border-bottom: 1px dashed var(--line); font-size: 0.89rem; }
+  ul.sources li:last-child { border-bottom: 0; }
+  ul.sources code {
+    font-family: var(--mono); font-size: 0.83em; background: var(--code-bg);
+    padding: 1px 5px; border-radius: 4px; word-break: break-word;
+  }
+  ul.sources .note { color: var(--ink-3); }
+
+  .mods { display: flex; flex-wrap: wrap; gap: 6px; }
+  .mod {
+    font-family: var(--mono); font-size: 0.76rem; background: var(--panel-2);
+    border: 1px solid var(--line); border-radius: 5px; padding: 2px 7px; color: var(--ink-2);
+  }
+  .mod.none { border-style: dashed; color: var(--ink-3); }
+
+  .prompt {
+    display: flex; gap: 10px; align-items: flex-start;
+    background: var(--code-bg); border: 1px solid var(--line);
+    border-radius: var(--radius); padding: 11px 13px; margin-bottom: 8px;
+  }
+  .prompt p {
+    margin: 0; flex: 1; font-family: var(--mono); font-size: 0.83rem;
+    line-height: 1.55; white-space: pre-wrap; word-break: break-word;
+  }
+  .prompt .path { color: var(--accent); font-weight: 600; }
+  .copy {
+    flex: none; font: inherit; font-size: 0.74rem; cursor: pointer;
+    background: var(--panel); color: var(--ink-2); border: 1px solid var(--line);
+    border-radius: 6px; padding: 4px 9px;
+  }
+  .copy:hover { border-color: var(--accent); color: var(--accent); }
+  .copy.ok { background: var(--accent); color: #fff; border-color: var(--accent); }
+
+  .empty { padding: 40px 0; color: var(--ink-3); text-align: center; }
+  footer {
+    margin-top: 48px; padding-top: 22px; border-top: 1px solid var(--line);
+    color: var(--ink-3); font-size: 0.85rem;
+  }
+  footer a { color: var(--accent); }
+  mark { background: var(--accent-soft); color: inherit; border-radius: 3px; padding: 0 2px; }
+</style>
+</head>
+<body>
+
+<div class="wrap">
+<header>
+  <h1>What's in a sysdiagnose &mdash; and what to ask about it</h1>
+  <p class="tagline">
+    An Apple sysdiagnose is a few hundred megabytes of mostly-binary diagnostic state. This page maps it
+    into categories, names the files each one lives in, and gives you prompts you can paste straight into
+    Claude Code to interrogate them.
+  </p>
+  <p class="privacy">
+    <strong>No device data on this page.</strong> Everything below describes the <em>structure</em> of a
+    sysdiagnose, not the contents of any particular one. Nothing here is read from a case, so this page is
+    safe to publish. Your extracted case stays local and gitignored.
+  </p>
+</header>
+
+<div class="controls">
+  <input type="search" id="q" placeholder="Search categories, files, prompts&hellip;" aria-label="Search">
+  <div class="seg" role="group" aria-label="Filter by platform">
+    <button data-plat="all" aria-pressed="true">All</button>
+    <button data-plat="macos" aria-pressed="false">macOS</button>
+    <button data-plat="ios" aria-pressed="false">iOS</button>
+  </div>
+  <div class="casebox">
+    <label for="casepath">case path</label>
+    <input type="text" id="casepath" value="cases/1" spellcheck="false" aria-label="Your case folder path">
+  </div>
+  <button class="themebtn" id="theme" aria-label="Toggle colour theme">Theme</button>
+</div>
+
+<p class="count" id="count"></p>
+<div class="grid" id="grid"></div>
+<p class="empty" id="empty" hidden>Nothing matches that search.</p>
+
+<footer>
+  <p>
+    Part of the <a href="https://github.com/EC-DIGIT-CSIRC/sysdiagnose">Sysdiagnose Analysis Framework</a>.
+    Module names in <span class="mod">monospace</span> are SAF parsers &mdash; run them with
+    <code>sysdiag -c &lt;case&gt; parse &lt;module&gt;</code>. Entries marked
+    <span class="mod none">no parser</span> are handled by the residual sweep instead.
+  </p>
+  <p>
+    Want the whole archive converted and indexed before you start asking?
+    <a href="local-analysis-prompt.md">Use the local analysis prompt</a> &mdash; paste it into
+    Claude Code on the Mac itself and it runs extract &rarr; convert &rarr; parse &rarr; index unattended.
+  </p>
+  <p>Capture a sysdiagnose: <strong>macOS</strong> &mdash; <code>sudo sysdiagnose</code>, or
+     &#8984;&#8997;&#8963;&#8679;&#46; &nbsp;&middot;&nbsp; <strong>iOS</strong> &mdash; hold both volume buttons + side button for ~1.5s,
+     then Settings &rsaquo; Privacy &amp; Security &rsaquo; Analytics &amp; Improvements &rsaquo; Analytics Data.</p>
+</footer>
+</div>
+
+<script>
+const CATEGORIES = [
+  {
+    name: "Device &amp; OS identity",
+    plat: "both",
+    blurb: "Who this machine is: model, serial, OS build, capture time, timezone. Always establish this first — every other answer is relative to it.",
+    sources: [
+      ["sw_vers", "macOS product name, version, build"],
+      ["remotectl_dumpstate.txt", "serial, UDID, OS version, product type"],
+      ["logs/SystemVersion/SystemVersion.plist", "OS build (iOS)"],
+      ["ioreg/IODeviceTree.txt", "platform serial + model, fallback source"],
+      ["sysdiagnose.log", "capture start/end and what was collected"]
+    ],
+    modules: ["sys", "remotectl_dumpstate", "iodevicetree"],
+    prompts: [
+      "Read the sysdiagnose case in {P} and tell me the exact device model, OS build, serial number, timezone, and when the capture was taken.",
+      "In {P}, open sysdiagnose.log and summarise which collection steps succeeded and which errored out — I want to know what's missing before I trust anything else.",
+      "Compare the device identity in {P} across remotectl_dumpstate, SystemVersion.plist and IODeviceTree. Flag any disagreement between them."
+    ]
+  },
+  {
+    name: "Apps &amp; installs",
+    plat: "both",
+    blurb: "What is installed, when it arrived, when it was updated or removed, and which App Store account pulled it down.",
+    sources: [
+      ["logs/MobileInstallation/mobile_installation.log*", "iOS install/update/delete events"],
+      ["logs/appinstallation/appstored.sqlitedb", "iOS App Store install records"],
+      ["logs/itunesstored/downloads.*.sqlitedb", "download queue and account"],
+      ["lsappinfo", "macOS registered/running app records"],
+      ["logs/MobileContainerManager/containermanagerd.log*", "container create/destroy"]
+    ],
+    modules: ["mobileinstallation", "appinstallation", "itunesstore", "containermanager", "brctl"],
+    prompts: [
+      "From the sysdiagnose in {P}, build a table of every app install, update and deletion with timestamps, sorted newest first.",
+      "In {P}, list apps that were installed and then deleted within 48 hours — short-lived installs are worth a look.",
+      "Using {P}, cross-reference installed bundle identifiers against processes seen running. Which installed apps never ran, and which processes ran with no matching install record?",
+      "In {P}, show me every app installed outside the App Store — sideloaded, enterprise-signed, or developer-provisioned."
+    ]
+  },
+  {
+    name: "Processes &amp; execution",
+    plat: "both",
+    blurb: "What was running at capture time, with arguments, parentage, CPU and memory. The best single snapshot of live state.",
+    sources: [
+      ["ps.txt", "process list with args"],
+      ["ps_thread.txt", "per-thread breakdown"],
+      ["taskinfo.txt", "task ports, memory, and flags"],
+      ["launchctl-print-*", "macOS launchd service state"],
+      ["sample-*", "targeted CPU samples of a busy process"]
+    ],
+    modules: ["ps", "psthread", "taskinfo"],
+    prompts: [
+      "From the sysdiagnose in {P}, list the top 20 processes by CPU and by memory, with their full command lines.",
+      "In {P}, cross-check ps, ps_thread and taskinfo. Show me any process that appears in one source but not the others.",
+      "Using {P}, find processes running from unusual locations — /tmp, /var/folders, hidden directories, or user-writable paths rather than /System or /usr.",
+      "In {P}, map the parent/child process tree and highlight anything spawned by a shell, script interpreter, or an app that shouldn't be spawning children."
+    ]
+  },
+  {
+    name: "Crashes, hangs &amp; panics",
+    plat: "both",
+    blurb: "Every crash report, spindump and kernel panic. Repeated crashes in one process are a strong lead — for bugs and for exploitation alike.",
+    sources: [
+      ["crashes_and_spins/**/*.ips", "individual crash reports"],
+      ["*.panic", "kernel panic logs"],
+      ["spindump-nosymbols.txt", "system-wide hang snapshot"],
+      ["logs/CrashReporter/**", "retained crash history"]
+    ],
+    modules: ["crashlogs", "spindumpnosymbols", "shutdownlogs"],
+    prompts: [
+      "From the sysdiagnose in {P}, list every crash grouped by process, with counts, first and last occurrence, and the exception type.",
+      "In {P}, show me all crashes with memory-corruption signatures — EXC_BAD_ACCESS, SIGSEGV, SIGABRT — and include the faulting address and top frames.",
+      "Using {P}, find processes that crashed repeatedly in a short window. For each, pull the surrounding log lines from the same minutes.",
+      "In {P}, analyse the spindump for blocked or deadlocked threads and tell me what they were waiting on."
+    ]
+  },
+  {
+    name: "Network, DNS &amp; VPN",
+    plat: "both",
+    blurb: "Interfaces, routes, resolvers, sockets, network extensions and per-process traffic. Where beaconing and exfiltration show up.",
+    sources: [
+      ["logs/Networking/com.apple.networkextension*.plist", "VPN / content filter / proxy configs"],
+      ["resolv.conf", "configured DNS resolvers"],
+      ["netstat*.txt, ifconfig.txt, scutil*.txt", "sockets, interfaces, network state"],
+      ["swcutil_show.txt", "app↔domain associations"],
+      ["logs/Networking/nettop*.txt", "per-process bytes in/out"]
+    ],
+    modules: ["networkextension", "networkextensioncache", "swcutil"],
+    prompts: [
+      "From the sysdiagnose in {P}, list every configured VPN, proxy and content filter, including which app installed it and whether it was enabled.",
+      "In {P}, extract all DNS queries and resolved hostnames from the unified log, then rank domains by query count.",
+      "Using {P}, find outbound connections to non-Apple infrastructure and group them by owning process.",
+      "In {P}, look for beaconing — a process contacting the same host at a suspiciously regular interval. Show the interval and jitter."
+    ]
+  },
+  {
+    name: "Wi-Fi &amp; location",
+    plat: "both",
+    blurb: "Known and scanned networks, BSSIDs, join history and location-service clients. BSSIDs geolocate, so this reconstructs movement.",
+    sources: [
+      ["WiFi/com.apple.wifi.known-networks.plist", "saved networks + last-joined times"],
+      ["WiFi/wifi_scan*.txt", "networks visible at capture time"],
+      ["WiFi/security.txt", "stored Wi-Fi credentials metadata"],
+      ["logs/locationd/**", "location client requests"]
+    ],
+    modules: ["wifi_known_networks", "wifinetworks", "wifiscan", "wifisecurity"],
+    prompts: [
+      "From the sysdiagnose in {P}, list every known Wi-Fi network with SSID, BSSID, security type and when it was last joined, newest first.",
+      "In {P}, show the networks visible in the scan at capture time and mark which ones the device had previously joined.",
+      "Using {P}, list every process that requested location services and how often — I want to know what was tracking position.",
+      "In {P}, build a rough movement timeline from Wi-Fi join events and location requests."
+    ]
+  },
+  {
+    name: "Power, battery &amp; thermal",
+    plat: "both",
+    blurb: "Battery chemistry, charge cycles, per-process energy, thermal pressure and sleep/wake. Unexplained drain is often the first symptom of something running that shouldn't.",
+    sources: [
+      ["logs/powerlogs/powerlog_*.PLSQL", "the powerlog SQLite database"],
+      ["logs/powerlogs/log_*.EPSQL", "energy accounting"],
+      ["logs/BatteryBDC/*.csv", "battery diagnostic counters"],
+      ["ioreg/IOPower.txt", "power tree and assertions"]
+    ],
+    modules: ["powerlogs", "battery_bdc", "iopower"],
+    prompts: [
+      "From the sysdiagnose in {P}, open the powerlog database, list its tables with row counts, and tell me which ones carry per-process energy data.",
+      "In {P}, rank processes by total energy consumed and flag any that are unexpectedly high for what they claim to be.",
+      "Using {P}, chart battery level over time and mark the periods of steepest drain, then tell me what was running during each.",
+      "In {P}, list all sleep/wake transitions and the power assertions that prevented sleep, with the process that held each one."
+    ]
+  },
+  {
+    name: "Privacy &amp; permissions (TCC)",
+    plat: "both",
+    blurb: "Which apps hold camera, microphone, screen recording, full-disk and accessibility access — and when each was granted. The single highest-signal table for surveillance concerns.",
+    sources: [
+      ["TCC.db", "the permission grant database"],
+      ["logs/Accessibility/TCC.db", "iOS location of the same"],
+      ["sfltool.LSSharedFileList.*", "macOS login items and favourites"]
+    ],
+    modules: ["accessibility_tcc"],
+    prompts: [
+      "From the sysdiagnose in {P}, dump the TCC database and show every app holding camera, microphone, screen-recording, accessibility or full-disk access, with the grant timestamp.",
+      "In {P}, find permissions that were granted rather than user-prompted — anything set programmatically or by an MDM profile.",
+      "Using {P}, list TCC grants in the order they were created and tell me which ones were added most recently.",
+      "In {P}, cross-reference apps holding microphone or camera access against processes that were actually running at capture time."
+    ]
+  },
+  {
+    name: "Persistence &amp; startup",
+    plat: "macos",
+    blurb: "Everything configured to run automatically: launch agents and daemons, login items, system extensions and kexts. Where persistence lives on macOS.",
+    sources: [
+      ["launchctl-print-gui-*, launchctl-print-system", "loaded launchd jobs"],
+      ["sfltool.LSSharedFileList.*", "login items"],
+      ["systemextensionsctl_diagnose", "installed system extensions"],
+      ["kmutil-diagnose", "loaded kernel extensions"],
+      ["logs/Accessibility/**", "accessibility-driven automation"]
+    ],
+    modules: [],
+    prompts: [
+      "From the sysdiagnose in {P}, list every loaded launchd agent and daemon with its program path and label, and separate Apple-signed from third-party.",
+      "In {P}, show all login items, system extensions and kernel extensions, flagging anything not signed by Apple.",
+      "Using {P}, find launchd jobs whose executable lives in a user-writable location or has a suspicious label — random strings, or names imitating Apple services.",
+      "In {P}, correlate persistence entries against running processes: which persistent items were actually active at capture time?"
+    ]
+  },
+  {
+    name: "Profiles, MDM &amp; provisioning",
+    plat: "both",
+    blurb: "Configuration profiles, management enrolment, supervision and activation history. An unexpected profile is a serious finding — it can silently reconfigure trust, VPN and restrictions.",
+    sources: [
+      ["logs/MCState/Shared/profile-*.stub", "installed configuration profiles"],
+      ["logs/MobileActivation/mobileactivationd.log*", "activation and provisioning"],
+      ["logs/MobileLockdown/lockdownd.log", "pairing and trust relationships"],
+      ["profiles*.txt", "macOS profile listing"]
+    ],
+    modules: ["mcstate_shared_profile", "mcsettingsevents", "mobileactivation", "lockdownd"],
+    prompts: [
+      "From the sysdiagnose in {P}, list every installed configuration profile, what it configures, who signed it, and when it was installed.",
+      "In {P}, tell me whether this device is supervised or MDM-enrolled, and if so by whom and since when.",
+      "Using {P}, extract the pairing history from lockdownd — which hosts established a trust relationship with this device, and when?",
+      "In {P}, look for profiles that install root certificates, VPN configurations or restrictions, and explain what each one would allow."
+    ]
+  },
+  {
+    name: "Security &amp; keychain",
+    plat: "ios",
+    blurb: "Keychain item metadata, key transparency, trusted accounts and paired devices. Item metadata only — secrets are never in a sysdiagnose.",
+    sources: [
+      ["security-sysdiagnose.txt", "keychain item classes and accounts"],
+      ["transparency.log", "key transparency events"],
+      ["logs/AppleAccount/**", "signed-in Apple accounts"]
+    ],
+    modules: ["security_sysdiagnose", "transparency", "transparency_json"],
+    prompts: [
+      "From the sysdiagnose in {P}, summarise the keychain contents by item class and owning application — metadata only.",
+      "In {P}, list every Apple account signed in on this device and every device linked to those accounts.",
+      "Using {P}, review the key transparency log for anything anomalous, and explain in plain terms what each event means."
+    ]
+  },
+  {
+    name: "Storage &amp; filesystem",
+    plat: "both",
+    blurb: "Volumes, partition layout, encryption state, mount points and free space. Establishes whether disk encryption was actually on.",
+    sources: [
+      ["disks.txt", "volumes and mount points"],
+      ["gpt", "partition table"],
+      ["securebootvariables", "secure boot / startup security state"],
+      ["logs/Filesystem/**", "filesystem diagnostics"]
+    ],
+    modules: ["disks"],
+    prompts: [
+      "From the sysdiagnose in {P}, describe the disk layout: volumes, filesystems, sizes, free space and encryption state.",
+      "In {P}, tell me the secure boot configuration and whether startup security was reduced or disabled at any point.",
+      "Using {P}, list all mounted volumes including external, network and disk-image mounts."
+    ]
+  },
+  {
+    name: "Hardware &amp; peripherals",
+    plat: "both",
+    blurb: "The IORegistry: USB, Thunderbolt, Bluetooth, displays and sensors. Reveals what was physically plugged in.",
+    sources: [
+      ["ioreg/IOUSB.txt", "USB device tree"],
+      ["ioreg/IOService.txt, IOACPIPlane.txt", "full service tree"],
+      ["BluetoothTraceFile.pklg", "Bluetooth packet trace"],
+      ["smcDiagnose, tbtDiagnose", "SMC sensors, Thunderbolt state"],
+      ["WindowServer.*.plist", "attached displays"]
+    ],
+    modules: ["iousb", "ioservice", "ioacpiplane", "iofirewire", "iodevicetree"],
+    prompts: [
+      "From the sysdiagnose in {P}, list every USB and Thunderbolt device present, with vendor, product and serial where available.",
+      "In {P}, show all displays that were attached, including external monitors and any screen-capture or mirroring clients.",
+      "Using {P}, summarise Bluetooth pairings and any devices connected at capture time.",
+      "In {P}, read the SMC sensor data and tell me about thermal and fan state."
+    ]
+  },
+  {
+    name: "Unified logs",
+    plat: "both",
+    blurb: "The system-wide log — usually the bulk of the archive and the richest evidence, but tens of millions of events. Always narrow by time, subsystem or process before asking for detail.",
+    sources: [
+      ["system_logs.logarchive/", "the tracev3 log store"],
+      ["system_logs.logarchive/Extra/shutdown.log", "shutdown reasons, plain text"],
+      ["logdata.statistics.*.txt", "per-subsystem volume statistics"],
+      ["oslog_archive_error.log", "present only if log collection failed"]
+    ],
+    modules: ["logarchive", "logdata_statistics", "logdata_statistics_txt"],
+    prompts: [
+      "In the sysdiagnose at {P}, first tell me whether system_logs.logarchive is present and complete, and whether oslog_archive_error.log exists. Don't expand anything yet.",
+      "From {P}, show me everything that happened in the 5 minutes around the capture time, across all sources, as one merged timeline.",
+      "In {P}, search the unified log for errors and faults only, group them by subsystem and process, and give me the top 20.",
+      "Using {P}, pull unified log entries for a specific process and time window I'll name — ask me for both before running anything expensive."
+    ]
+  },
+  {
+    name: "Coverage &amp; blind spots",
+    plat: "both",
+    blurb: "What could not be parsed, and why. Ask this early — knowing the gaps is what keeps the rest of the analysis honest.",
+    sources: [
+      ["cases/&lt;id&gt;/logs/summary-*.json", "per-module event counts, errors, warnings"],
+      ["cases/&lt;id&gt;/index/catalog.parquet", "every file with its conversion status"],
+      ["cases/&lt;id&gt;/data/**", "the extracted tree itself"]
+    ],
+    modules: ["coverage", "file_stats"],
+    prompts: [
+      "For the case at {P}, tell me what you CAN'T see: which files failed to convert, which parsers returned nothing, and what that means for the questions I can ask.",
+      "In {P}, compare the number of files in the extracted tree against the number actually indexed. Account for the difference.",
+      "For {P}, list every parser that reported errors or warnings, with counts, and tell me which results I should treat as unreliable."
+    ]
+  }
+];
+
+const grid = document.getElementById("grid");
+const qEl = document.getElementById("q");
+const countEl = document.getElementById("count");
+const emptyEl = document.getElementById("empty");
+const caseEl = document.getElementById("casepath");
+let platform = "all";
+
+function casePath() {
+  return (caseEl.value || "").trim() || "cases/1";
+}
+function esc(s) {
+  return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+}
+function promptText(tpl) {
+  return tpl.replace(/\{P\}/g, casePath());
+}
+function promptHtml(tpl) {
+  return esc(tpl).replace(/\{P\}/g, '<span class="path">' + esc(casePath()) + "</span>");
+}
+
+function render() {
+  const q = qEl.value.trim().toLowerCase();
+  grid.innerHTML = "";
+  let shown = 0;
+
+  for (const cat of CATEGORIES) {
+    if (platform !== "all" && cat.plat !== "both" && cat.plat !== platform) continue;
+
+    const haystack = [
+      cat.name, cat.blurb,
+      cat.sources.map(s => s.join(" ")).join(" "),
+      cat.modules.join(" "),
+      cat.prompts.join(" ")
+    ].join(" ").toLowerCase();
+    if (q && !haystack.includes(q)) continue;
+
+    shown++;
+    const d = document.createElement("details");
+    d.className = "cat";
+    if (q) d.open = true;
+
+    const tags =
+      cat.plat === "macos" ? '<span class="tag macos">macOS</span>' :
+      cat.plat === "ios"   ? '<span class="tag ios">iOS</span>'   : "";
+
+    const mods = cat.modules.length
+      ? cat.modules.map(m => '<span class="mod">' + m + "</span>").join("")
+      : '<span class="mod none">no parser &mdash; residual sweep</span>';
+
+    d.innerHTML =
+      "<summary><span class='cat-name'>" + cat.name + "</span>" + tags +
+      "<span class='cat-blurb'>" + cat.blurb + "</span></summary>" +
+      "<div class='body'>" +
+        "<h3>Where it lives</h3><ul class='sources'>" +
+          cat.sources.map(s =>
+            "<li><code>" + s[0] + "</code> <span class='note'>&mdash; " + s[1] + "</span></li>"
+          ).join("") +
+        "</ul>" +
+        "<h3>SAF modules</h3><div class='mods'>" + mods + "</div>" +
+        "<h3>Ask Claude Code</h3>" +
+          cat.prompts.map((p, i) =>
+            "<div class='prompt'><p>" + promptHtml(p) + "</p>" +
+            "<button class='copy' data-cat='" + CATEGORIES.indexOf(cat) + "' data-i='" + i + "'>Copy</button></div>"
+          ).join("") +
+      "</div>";
+
+    grid.appendChild(d);
+  }
+
+  countEl.textContent = shown + (shown === 1 ? " category" : " categories") +
+    (platform === "all" ? "" : " · " + platform) + (q ? ' · matching "' + q + '"' : "");
+  emptyEl.hidden = shown !== 0;
+}
+
+grid.addEventListener("click", async (e) => {
+  const btn = e.target.closest(".copy");
+  if (!btn) return;
+  e.preventDefault();
+  const cat = CATEGORIES[+btn.dataset.cat];
+  const text = promptText(cat.prompts[+btn.dataset.i]);
+  try {
+    await navigator.clipboard.writeText(text);
+  } catch {
+    const ta = document.createElement("textarea");
+    ta.value = text;
+    document.body.appendChild(ta);
+    ta.select();
+    document.execCommand("copy");
+    ta.remove();
+  }
+  btn.textContent = "Copied";
+  btn.classList.add("ok");
+  setTimeout(() => { btn.textContent = "Copy"; btn.classList.remove("ok"); }, 1400);
+});
+
+qEl.addEventListener("input", render);
+caseEl.addEventListener("input", render);
+
+document.querySelectorAll(".seg button").forEach(b => {
+  b.addEventListener("click", () => {
+    platform = b.dataset.plat;
+    document.querySelectorAll(".seg button").forEach(x =>
+      x.setAttribute("aria-pressed", String(x === b))
+    );
+    render();
+  });
+});
+
+document.getElementById("theme").addEventListener("click", () => {
+  const cur = document.documentElement.getAttribute("data-theme");
+  const sysDark = matchMedia("(prefers-color-scheme: dark)").matches;
+  const next = cur ? (cur === "dark" ? "light" : "dark") : (sysDark ? "light" : "dark");
+  document.documentElement.setAttribute("data-theme", next);
+});
+
+render();
+</script>
+</body>
+</html>
